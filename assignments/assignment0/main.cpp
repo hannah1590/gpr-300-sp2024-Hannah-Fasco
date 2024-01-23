@@ -42,7 +42,7 @@ int main() {
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
-	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
+	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
@@ -54,7 +54,7 @@ int main() {
 	glEnable(GL_DEPTH_TEST); //Depth testing
 
 	//Handles to OpenGL object are unsigned integers
-	GLuint brickTexture = ew::loadTexture("assets/brick_color.jpg");
+	GLuint brickTexture = ew::loadTexture("assets/tiles_color.jpg");
 	//Bind brick texture to texture unit 0 
 	glBindTextureUnit(0, brickTexture);
 	//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
@@ -84,14 +84,12 @@ int main() {
 
 		monkeyModel.draw(); //Draws monkey model using current shader
 
-		//In render loop...
 		//Rotate model around Y axis
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
 		//transform.modelMatrix() combines translation, rotation, and scale into a 4x4 model matrix
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 
-		//In render loop...
 		cameraController.move(window, &camera, deltaTime);
 
 		drawUI();
