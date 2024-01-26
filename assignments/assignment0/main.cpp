@@ -63,8 +63,7 @@ int main() {
 	shader.use();
 	shader.setInt("_MainTex", 0);
 	shader.setInt("normalMap", 1);
-	shader.setVec3("_EyePos", camera.position);
-
+	
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
@@ -76,9 +75,10 @@ int main() {
 		glClearColor(0.6f,0.8f,0.92f,1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		shader.use();
+		shader.use();;
 		shader.setMat4("_Model", glm::mat4(1.0f));
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		shader.setVec3("_EyePos", camera.position);
 
 		shader.setFloat("_Material.Ka", material.Ka);
 		shader.setFloat("_Material.Kd", material.Kd);
