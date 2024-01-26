@@ -55,11 +55,14 @@ int main() {
 
 	//Handles to OpenGL object are unsigned integers
 	GLuint brickTexture = ew::loadTexture("assets/tiles_color.jpg");
+	GLuint normalTexture = ew::loadTexture("assets/tiles_normal.jpg");
 	//Bind brick texture to texture unit 0 
 	glBindTextureUnit(0, brickTexture);
+	glBindTextureUnit(1, normalTexture);
 	//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
 	shader.use();
 	shader.setInt("_MainTex", 0);
+	shader.setInt("normalMap", 1);
 	shader.setVec3("_EyePos", camera.position);
 
 	while (!glfwWindowShouldClose(window)) {
