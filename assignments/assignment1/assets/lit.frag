@@ -25,7 +25,6 @@ struct Material{
 uniform Material _Material;
 
 void main(){
-/*
 	//Make sure fragment normal is still length 1 after interpolation.
 	vec3 normal = normalize(fs_in.WorldNormal);
 
@@ -46,8 +45,6 @@ void main(){
 	lightColor+=_AmbientColor * _Material.Ka;
 	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
 	FragColor1 = vec4(objectColor * lightColor,1.0);
-	*/
-	FragColor1 = vec4(1.0,0.0,0.0,1.0);
-	FragColor2 = vec4(0.0,1.0,0.0,1.0);
-
+	
+	//FragColor1 = texture(_MainTex, fs_in.TexCoord);
 }

@@ -19,6 +19,7 @@ uniform vec3 lightPos;
 uniform vec3 viewPos;
 
 void main(){
+	
 	//Transform vertex position to World Space.
 	vs_out.WorldPos = vec3(_Model * vec4(vPos,1.0));
 	//Transform vertex normal to world space using Normal Matrix
@@ -34,5 +35,8 @@ void main(){
 	vec3 B = cross(N, T);
 
 	vs_out.TBN = mat3(T, B, N);  
+	
+	//gl_Position = vec4(vPos.x, vPos.y, 0.0, 1.0);
+	//vs_out.TexCoord = vTexCoord;
 }
 
