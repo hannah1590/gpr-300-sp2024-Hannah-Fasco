@@ -35,8 +35,5 @@ void main(){
 	vec3 B = cross(N, T);
 
 	vs_out.TBN = mat3(T, B, N);  
-	
-	//gl_Position = vec4(vPos.x, vPos.y, 0.0, 1.0);
-	//vs_out.TexCoord = vTexCoord;
 }
 

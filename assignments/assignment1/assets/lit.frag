@@ -1,6 +1,5 @@
 #version 450
 layout(location = 0) out vec4 FragColor1; //GL_COLOR_ATTACHMNENT0
-layout(location = 1) out vec4 FragColor2; //GL_COLOR_ATTACHMNENT1
 
 in Surface{
 	vec3 WorldPos; //Vertex position in world space
@@ -45,6 +44,4 @@ void main(){
 	lightColor+=_AmbientColor * _Material.Ka;
 	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
 	FragColor1 = vec4(objectColor * lightColor,1.0);
-	
-	//FragColor1 = texture(_MainTex, fs_in.TexCoord);
 }

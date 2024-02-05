@@ -10,20 +10,13 @@ hannah::Framebuffer hannah::createFramebuffer(unsigned int width, unsigned int h
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo.fbo);
 
 	// color buffer
-	glGenTextures(8, fbo.colorBuffer);
-	for (unsigned int i = 0; i < 8; i++)
-	{
-		glGenTextures(1, &fbo.colorBuffer[i]);
-		glBindTexture(GL_TEXTURE_2D, fbo.colorBuffer[i]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, fbo.colorBuffer[i], 0);
-	}
-	//Tell OpenGL to draw to 8 color buffers
-	GLenum attachments[8] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-	glDrawBuffers(8, attachments);
-	
+	glGenTextures(1, &fbo.colorBuffer[0]);
+	glBindTexture(GL_TEXTURE_2D, fbo.colorBuffer[0]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo.colorBuffer[0], 0);
+
 	// depth buffer
 	glGenTextures(1, &fbo.depthBuffer);
 	glBindTexture(GL_TEXTURE_2D, fbo.depthBuffer);
@@ -42,8 +35,6 @@ hannah::Framebuffer hannah::createFramebuffer(unsigned int width, unsigned int h
 	if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
 		printf("Framebuffer incomplete: %d", fboStatus);
 	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	return fbo;
 }
