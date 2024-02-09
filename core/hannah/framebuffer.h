@@ -13,5 +13,7 @@ namespace hannah {
 		unsigned int width;
 		unsigned int height;
 	};
-	Framebuffer createFramebuffer(unsigned int width, unsigned int height, int colorFormat);
+	Framebuffer createFramebufferWithRBO(unsigned int width, unsigned int height, int colorFormat);
+	Framebuffer createFramebufferWithDepthBuffer(unsigned int width, unsigned int height, int colorFormat);
+	Framebuffer createFramebufferWithShadowMap(unsigned int width, unsigned int height, int colorFormat);
 }
