@@ -87,7 +87,7 @@ hannah::Framebuffer hannah::createFramebufferWithShadowMap(unsigned int width, u
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowfbo.depthBuffer, 0);
 	
-	float borderColor[4] = { 1.0f,1.0f,1.0f,1.0 };
+	float borderColor[4] = { 1.0f,1.0f,1.0f,1.0f };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 	glDrawBuffer(GL_NONE);

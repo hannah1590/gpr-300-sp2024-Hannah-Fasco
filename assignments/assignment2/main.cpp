@@ -41,6 +41,9 @@ int screenHeight = 720;
 float prevFrameTime;
 float deltaTime;
 
+int shadowWidth = 1024;
+int shadowHeight = 1024;
+
 float gamma = 2.2f;
 
 hannah::Framebuffer shadowFramebuffer;
@@ -65,7 +68,7 @@ int main() {
 	lightCam.orthographic = true;
 	lightCam.orthoHeight = 4;
 	lightCam.position = camera.position;
-	lightCam.target = glm::vec3(0.0f, 0.0f, 0.0f);
+	lightCam.target = glm::vec3(0.0f, 0.5f, 0.0f);
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK); //Back face culling
@@ -99,12 +102,12 @@ int main() {
 
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer.fbo);
 		glBindTexture(GL_TEXTURE_2D, shadowFramebuffer.depthBuffer);
-		glViewport(0, 0, 1024, 1024);
+		glViewport(0, 0, shadowWidth, shadowHeight);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		//glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
 
 		depthShader.use();
-		depthShader.setMat4("_ViewProject", lightCam.projectionMatrix() * lightCam.viewMatrix());
+		depthShader.setMat4("_ViewProjection", lightCam.projectionMatrix() * lightCam.viewMatrix());
 		depthShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
 
@@ -112,7 +115,7 @@ int main() {
 		glBindTextureUnit(0, brickTexture);
 		glBindTextureUnit(1, normalTexture);
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
-		glViewport(0, 0, framebuffer.width, framebuffer.height);
+		glViewport(0, 0, screenWidth, screenHeight);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
 		//glClear(GL_DEPTH_BUFFER_BIT);
@@ -132,7 +135,7 @@ int main() {
 		shader.setFloat("_Material.Kd", material.Kd);
 		shader.setFloat("_Material.Ks", material.Ks);
 		shader.setFloat("_Material.Shininess", material.Shininess);
-		
+
 		shader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
 
@@ -143,8 +146,7 @@ int main() {
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 		
 		//transform.modelMatrix() combines translation, rotation, and scale into a 4x4 model matrix
-		     
-
+		
 		cameraController.move(window, &camera, deltaTime);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -192,7 +194,7 @@ void drawUI() {
 	ImVec2 windowSize = ImGui::GetWindowSize();
 	//Invert 0-1 V to flip vertically for ImGui display
 	//shadowMap is the texture2D handle
-	ImGui::Image((ImTextureID)shadowFramebuffer.fbo, windowSize, ImVec2(0, 1), ImVec2(1, 0));
+	ImGui::Image((ImTextureID)shadowFramebuffer.depthBuffer, windowSize, ImVec2(0, 1), ImVec2(1, 0));
 	ImGui::EndChild();
 	ImGui::End();
 
