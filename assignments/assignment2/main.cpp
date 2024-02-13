@@ -20,11 +20,12 @@
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
-void drawUI(hannah::Framebuffer framebuffer);
+void drawUI();
 
 ew::Camera camera;
 ew::Transform monkeyTransform;
 ew::CameraController cameraController;
+ew::Camera lightCam;
 
 struct Material {
 	float Ka = 1.0;
@@ -42,6 +43,7 @@ float deltaTime;
 
 float gamma = 2.2f;
 
+hannah::Framebuffer shadowFramebuffer;
 int main() {
 	GLFWwindow* window = initWindow("Assignment 2", screenWidth, screenHeight);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
@@ -51,11 +53,19 @@ int main() {
 	ew::Shader depthShader = ew::Shader("assets/depth.vert", "assets/depth.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
+	ew::Transform planeTransform;
+	planeTransform.position = glm::vec3(0.0f, -1.0f, 0.0f);
 
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
 	camera.aspectRatio = (float)screenWidth / screenHeight;
 	camera.fov = 60.0f; //Vertical field of view, in degrees
+
+	lightCam.aspectRatio = 1;
+	lightCam.orthographic = true;
+	lightCam.orthoHeight = 4;
+	lightCam.position = camera.position;
+	lightCam.target = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK); //Back face culling
@@ -64,7 +74,8 @@ int main() {
 	unsigned int dummyVAO;
 	glCreateVertexArrays(1, &dummyVAO);
 
-	hannah::Framebuffer framebuffer = hannah::createFramebufferWithShadowMap(screenWidth, screenHeight, GL_RGB16F);
+	hannah::Framebuffer framebuffer = hannah::createFramebufferWithRBO(screenWidth, screenHeight, GL_RGB16F);
+	shadowFramebuffer = hannah::createFramebufferWithShadowMap(screenWidth, screenHeight, GL_RGB16F);
 
 	//Handles to OpenGL object are unsigned integers
 	GLuint brickTexture = ew::loadTexture("assets/travertine_color.jpg");
@@ -84,30 +95,33 @@ int main() {
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
 
+		lightCam.position = camera.position;
+
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer.fbo);
+		glBindTexture(GL_TEXTURE_2D, shadowFramebuffer.depthBuffer);
+		glViewport(0, 0, 1024, 1024);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		//glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
+
+		depthShader.use();
+		depthShader.setMat4("_ViewProject", lightCam.projectionMatrix() * lightCam.viewMatrix());
+		depthShader.setMat4("_Model", monkeyTransform.modelMatrix());
+		monkeyModel.draw();
+
 		//RENDER
 		glBindTextureUnit(0, brickTexture);
 		glBindTextureUnit(1, normalTexture);
-
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
 		glViewport(0, 0, framebuffer.width, framebuffer.height);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
+		//glClear(GL_DEPTH_BUFFER_BIT);
+		//glActiveTexture(GL_TEXTURE0);
+		//glBindTexture(GL_TEXTURE_2D, brickTexture);
 
-		float near_plane = 1.0f, far_plane = 7.5f;
-		glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-		glm::mat4 lightView = glm::lookAt(glm::vec3(-2.0f, 4.0f, -1.0f),
-			glm::vec3(0.0f, 0.0f, 0.0f),
-			glm::vec3(0.0f, 1.0f, 0.0f));
-		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
-		depthShader.use();
-		depthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-
-		glViewport(0, 0, 1024, 1024);
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
-		glClear(GL_DEPTH_BUFFER_BIT);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, brickTexture);
+		// reset viewport
+		//glViewport(0, 0, screenWidth, screenHeight);
+		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		shader.use();
 		shader.setMat4("_Model", glm::mat4(1.0f));
@@ -118,14 +132,18 @@ int main() {
 		shader.setFloat("_Material.Kd", material.Kd);
 		shader.setFloat("_Material.Ks", material.Ks);
 		shader.setFloat("_Material.Shininess", material.Shininess);
+		
+		shader.setMat4("_Model", planeTransform.modelMatrix());
+		planeMesh.draw();
 
+		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw(); //Draws monkey model using current shader
 
 		//Rotate model around Y axis
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 		
 		//transform.modelMatrix() combines translation, rotation, and scale into a 4x4 model matrix
-		shader.setMat4("_Model", monkeyTransform.modelMatrix());
+		     
 
 		cameraController.move(window, &camera, deltaTime);
 
@@ -137,11 +155,9 @@ int main() {
 
 		glBindTextureUnit(0, framebuffer.colorBuffer[0]);
 		glBindVertexArray(dummyVAO);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, framebuffer.colorBuffer[0]);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
-		drawUI(framebuffer);
+		drawUI();
 
 		glfwSwapBuffers(window);
 	}
@@ -154,7 +170,7 @@ void resetCamera(ew::Camera* camera, ew::CameraController* controller) {
 	controller->yaw = controller->pitch = 0;
 }
 
-void drawUI(hannah::Framebuffer framebuffer) {
+void drawUI() {
 	ImGui_ImplGlfw_NewFrame();
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui::NewFrame();
@@ -176,7 +192,7 @@ void drawUI(hannah::Framebuffer framebuffer) {
 	ImVec2 windowSize = ImGui::GetWindowSize();
 	//Invert 0-1 V to flip vertically for ImGui display
 	//shadowMap is the texture2D handle
-	ImGui::Image((ImTextureID)framebuffer.fbo, windowSize, ImVec2(0, 1), ImVec2(1, 0));
+	ImGui::Image((ImTextureID)shadowFramebuffer.fbo, windowSize, ImVec2(0, 1), ImVec2(1, 0));
 	ImGui::EndChild();
 	ImGui::End();
 
