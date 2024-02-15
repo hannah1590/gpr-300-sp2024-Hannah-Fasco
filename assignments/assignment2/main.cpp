@@ -46,6 +46,8 @@ int shadowHeight = 1024;
 
 float gamma = 2.2f;
 
+glm::vec3 lightDir;// = glm::vec3(0.0f, -1.0f, 0.0f);
+
 hannah::Framebuffer shadowFramebuffer;
 int main() {
 	GLFWwindow* window = initWindow("Assignment 2", screenWidth, screenHeight);
@@ -66,9 +68,11 @@ int main() {
 
 	lightCam.aspectRatio = 1;
 	lightCam.orthographic = true;
-	lightCam.orthoHeight = 4;
-	lightCam.position = camera.position;
-	lightCam.target = glm::vec3(0.0f, 0.5f, 0.0f);
+	lightCam.orthoHeight = 5;
+	lightCam.position = glm::vec3(0.0f, 1.0f, 0.5f);
+	lightCam.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
+
+	lightDir = glm::normalize(lightCam.target - lightCam.position);
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK); //Back face culling
@@ -84,10 +88,15 @@ int main() {
 	GLuint brickTexture = ew::loadTexture("assets/travertine_color.jpg");
 	GLuint normalTexture = ew::loadTexture("assets/travertine_normal.jpg");
 
+	glBindTextureUnit(0, brickTexture);
+	glBindTextureUnit(1, normalTexture);
+	glBindTextureUnit(2, shadowFramebuffer.depthBuffer);
+
 	//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
 	shader.use();
 	shader.setInt("_MainTex", 0);
 	shader.setInt("normalMap", 1);
+	shader.setInt("_ShadowMap", 2);
 
 	postProcess.use();
 	
@@ -98,39 +107,36 @@ int main() {
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
 
-		lightCam.position = camera.position;
-
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer.fbo);
 		glBindTexture(GL_TEXTURE_2D, shadowFramebuffer.depthBuffer);
 		glViewport(0, 0, shadowWidth, shadowHeight);
 		glClear(GL_DEPTH_BUFFER_BIT);
-		//glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
 
+		lightDir = glm::normalize(lightCam.target - lightCam.position);
 		depthShader.use();
 		depthShader.setMat4("_ViewProjection", lightCam.projectionMatrix() * lightCam.viewMatrix());
 		depthShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
 
 		//RENDER
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
 		glBindTextureUnit(0, brickTexture);
 		glBindTextureUnit(1, normalTexture);
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
+		glBindTextureUnit(2, shadowFramebuffer.depthBuffer);
 		glViewport(0, 0, screenWidth, screenHeight);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
-		//glClear(GL_DEPTH_BUFFER_BIT);
-		//glActiveTexture(GL_TEXTURE0);
-		//glBindTexture(GL_TEXTURE_2D, brickTexture);
 
 		// reset viewport
-		//glViewport(0, 0, screenWidth, screenHeight);
-		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
+		glViewport(0, 0, screenWidth, screenHeight);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		shader.use();
 		shader.setMat4("_Model", glm::mat4(1.0f));
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		shader.setMat4("_LightViewProj", lightCam.projectionMatrix() * lightCam.viewMatrix());
 		shader.setVec3("_EyePos", camera.position);
-
+		shader.setVec3("_LightDirection", lightDir);
 		shader.setFloat("_Material.Ka", material.Ka);
 		shader.setFloat("_Material.Kd", material.Kd);
 		shader.setFloat("_Material.Ks", material.Ks);
@@ -141,12 +147,11 @@ int main() {
 
 		shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw(); //Draws monkey model using current shader
-
+		
 		//Rotate model around Y axis
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
-		
+	
 		//transform.modelMatrix() combines translation, rotation, and scale into a 4x4 model matrix
-		
 		cameraController.move(window, &camera, deltaTime);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -157,6 +162,8 @@ int main() {
 
 		glBindTextureUnit(0, framebuffer.colorBuffer[0]);
 		glBindVertexArray(dummyVAO);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, framebuffer.colorBuffer[0]);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		drawUI();
@@ -184,6 +191,8 @@ void drawUI() {
 		ImGui::SliderFloat("SpecularK", &material.Ks, 0.0f, 1.0f);
 		ImGui::SliderFloat("Shininess", &material.Shininess, 2.0f, 1024.0f);
 		ImGui::SliderFloat("Gamma", &gamma, 0.0f, 5.0f);
+		ImGui::SliderFloat3("LightDir", &lightCam.position.r, -1.0f, 1.0f);
+		ImGui::SliderFloat("Height", &lightCam.orthoHeight, 4.0f, 10.0f);
 	}
 	ImGui::End();
 

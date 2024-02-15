@@ -12,6 +12,8 @@ hannah::Framebuffer hannah::createFramebufferWithRBO(unsigned int width, unsigne
 	// color buffer
 	glGenTextures(1, &fbo.colorBuffer[0]);
 	glBindTexture(GL_TEXTURE_2D, fbo.colorBuffer[0]);
+	glTexStorage2D(GL_TEXTURE_2D, 1, colorFormat, fbo.width, fbo.height);
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, fbo.colorBuffer[0], 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
