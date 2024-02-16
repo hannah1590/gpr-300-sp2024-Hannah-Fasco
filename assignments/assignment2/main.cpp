@@ -46,7 +46,9 @@ int shadowHeight = 1024;
 
 float gamma = 2.2f;
 
-glm::vec3 lightDir;// = glm::vec3(0.0f, -1.0f, 0.0f);
+glm::vec3 lightDir = glm::vec3(0.0f, -1.0f, 0.0f);
+float minBias = 0.005f;
+float maxBias = 0.015f;
 
 hannah::Framebuffer shadowFramebuffer;
 int main() {
@@ -69,10 +71,11 @@ int main() {
 	lightCam.aspectRatio = 1;
 	lightCam.orthographic = true;
 	lightCam.orthoHeight = 5;
-	lightCam.position = glm::vec3(0.0f, 1.0f, 0.5f);
+	
 	lightCam.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
-
-	lightDir = glm::normalize(lightCam.target - lightCam.position);
+	lightCam.position = (lightCam.target - glm::normalize(lightDir)) * 5.0f;//glm::normalize(lightDir - lightCam.target);
+	//lightDir = glm::normalize(lightCam.target - lightCam.position);
+	lightCam.farPlane = 10.0f;
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK); //Back face culling
@@ -82,7 +85,7 @@ int main() {
 	glCreateVertexArrays(1, &dummyVAO);
 
 	hannah::Framebuffer framebuffer = hannah::createFramebufferWithRBO(screenWidth, screenHeight, GL_RGB16F);
-	shadowFramebuffer = hannah::createFramebufferWithShadowMap(screenWidth, screenHeight, GL_RGB16F);
+	shadowFramebuffer = hannah::createFramebufferWithShadowMap(shadowWidth, shadowHeight, GL_RGB16F);
 
 	//Handles to OpenGL object are unsigned integers
 	GLuint brickTexture = ew::loadTexture("assets/travertine_color.jpg");
@@ -112,7 +115,10 @@ int main() {
 		glViewport(0, 0, shadowWidth, shadowHeight);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		lightDir = glm::normalize(lightCam.target - lightCam.position);
+		glCullFace(GL_FRONT);
+
+		//lightDir = glm::normalize(lightCam.target - lightCam.position);
+		lightCam.position = (lightCam.target - glm::normalize(lightDir)) * 5.0f;
 		depthShader.use();
 		depthShader.setMat4("_ViewProjection", lightCam.projectionMatrix() * lightCam.viewMatrix());
 		depthShader.setMat4("_Model", monkeyTransform.modelMatrix());
@@ -131,16 +137,21 @@ int main() {
 		glViewport(0, 0, screenWidth, screenHeight);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		glCullFace(GL_BACK);
+
 		shader.use();
 		shader.setMat4("_Model", glm::mat4(1.0f));
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		shader.setMat4("_LightViewProj", lightCam.projectionMatrix() * lightCam.viewMatrix());
 		shader.setVec3("_EyePos", camera.position);
-		shader.setVec3("_LightDirection", lightDir);
+		shader.setVec3("_LightDirection", glm::normalize(lightDir));
 		shader.setFloat("_Material.Ka", material.Ka);
 		shader.setFloat("_Material.Kd", material.Kd);
 		shader.setFloat("_Material.Ks", material.Ks);
 		shader.setFloat("_Material.Shininess", material.Shininess);
+
+		shader.setFloat("minBias", minBias);
+		shader.setFloat("maxBias", maxBias);
 
 		shader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
@@ -191,8 +202,10 @@ void drawUI() {
 		ImGui::SliderFloat("SpecularK", &material.Ks, 0.0f, 1.0f);
 		ImGui::SliderFloat("Shininess", &material.Shininess, 2.0f, 1024.0f);
 		ImGui::SliderFloat("Gamma", &gamma, 0.0f, 5.0f);
-		ImGui::SliderFloat3("LightDir", &lightCam.position.r, -1.0f, 1.0f);
+		ImGui::SliderFloat3("LightDir", &lightDir.r, -1.0f, 1.0f);
 		ImGui::SliderFloat("Height", &lightCam.orthoHeight, 4.0f, 10.0f);
+		ImGui::SliderFloat("MinBias", &minBias, 0.0f, 1.0f);
+		ImGui::SliderFloat("MaxBias", &maxBias, 0.0f, 1.0f);
 	}
 	ImGui::End();
 
