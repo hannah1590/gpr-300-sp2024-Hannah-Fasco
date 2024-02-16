@@ -36,6 +36,7 @@ float calcShadow(sampler2D shadowMap, vec4 lightSpacePos, float bias){
 	float myDepth = sampleCoord.z - bias; 
 	if(myDepth > 1.0f)
 		return 0.0f;
+
 	float shadowMapDepth = texture(shadowMap, sampleCoord.xy).r;
 	//step(a,b) returns 1.0 if a >= b, 0.0 otherwise
 	float totalShadow = 0.0f;
@@ -46,10 +47,12 @@ float calcShadow(sampler2D shadowMap, vec4 lightSpacePos, float bias){
 			totalShadow += step(texture(_ShadowMap,uv).r,myDepth);
 		}
 	}
-	//return totalShadow / 9.0;
+	totalShadow /= 9.0;
 
-
-	return step(shadowMapDepth,myDepth);
+	// keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
+    if(sampleCoord.z > 1.0)
+        totalShadow = 0.0;
+	return totalShadow;
 }
 
 void main(){
