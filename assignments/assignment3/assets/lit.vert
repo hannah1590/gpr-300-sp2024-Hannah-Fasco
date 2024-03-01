@@ -13,6 +13,7 @@ out Surface{
 	vec3 WorldNormal; //Vertex normal in world space
 	vec2 TexCoord;
 	mat3 TBN;
+	vec2 UV;
 }vs_out;
 
 uniform mat4 _LightViewProj; //view + projection of light source camera

@@ -60,6 +60,7 @@ int main() {
 	ew::Shader postProcess = ew::Shader("assets/post.vert", "assets/post.frag");
 	ew::Shader depthShader = ew::Shader("assets/depth.vert", "assets/depth.frag");
 	ew::Shader gShader = ew::Shader("assets/lit.vert", "assets/geometry.frag");
+	ew::Shader deferredShader = ew::Shader("assets/lit.vert", "assets/deferredLit.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
 	ew::Transform planeTransform;
@@ -94,15 +95,14 @@ int main() {
 	GLuint brickTexture = ew::loadTexture("assets/travertine_color.jpg");
 	GLuint normalTexture = ew::loadTexture("assets/travertine_normal.jpg");
 
-	glBindTextureUnit(3, brickTexture);
-	glBindTextureUnit(4, normalTexture);
-	glBindTextureUnit(5, shadowFramebuffer.depthBuffer);
+	
+	//glBindTextureUnit(2, shadowFramebuffer.depthBuffer);
 
 	//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
 	shader.use();
-	shader.setInt("_MainTex", 3);
-	shader.setInt("normalMap", 4);
-	shader.setInt("_ShadowMap", 5);
+	shader.setInt("_MainTex", 0);
+	shader.setInt("normalMap", 1);
+	shader.setInt("_ShadowMap", 2);
 
 	postProcess.use();
 	
@@ -119,10 +119,12 @@ int main() {
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glBindTextureUnit(0, gBuffer.colorBuffer[0]);
-		glBindTextureUnit(1, gBuffer.colorBuffer[1]);
-		glBindTextureUnit(2, gBuffer.colorBuffer[2]);
-		
+		//glBindTextureUnit(0, gBuffer.colorBuffer[0]);
+		//glBindTextureUnit(1, gBuffer.colorBuffer[1]);
+		//glBindTextureUnit(2, gBuffer.colorBuffer[2]);
+		glBindTextureUnit(0, brickTexture);
+		glBindTextureUnit(1, normalTexture);
+
 		gShader.use();
 		gShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		gShader.setMat4("_LightViewProj", lightCam.projectionMatrix() * lightCam.viewMatrix());
@@ -130,6 +132,40 @@ int main() {
 		planeMesh.draw();
 		gShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
+
+		//After geometry pass
+		//LIGHTING PASS
+		//if using post processing, we draw to our offscreen framebuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
+		glViewport(0, 0, framebuffer.width, framebuffer.height);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		deferredShader.use();
+		//TODO: Set the rest of your lighting uniforms for deferredShader. (same way we did this for lit.frag)
+		deferredShader.setInt("_MainTex", 0);
+		deferredShader.setInt("normalMap", 1);
+		deferredShader.setInt("_ShadowMap", 2);
+		deferredShader.setMat4("_Model", glm::mat4(1.0f));
+		deferredShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		deferredShader.setMat4("_LightViewProj", lightCam.projectionMatrix() * lightCam.viewMatrix());
+		deferredShader.setVec3("_EyePos", camera.position);
+		deferredShader.setVec3("_LightDirection", glm::normalize(lightDir));
+		deferredShader.setFloat("_Material.Ka", material.Ka);
+		deferredShader.setFloat("_Material.Kd", material.Kd);
+		deferredShader.setFloat("_Material.Ks", material.Ks);
+		deferredShader.setFloat("_Material.Shininess", material.Shininess);
+
+		deferredShader.setFloat("minBias", minBias);
+		deferredShader.setFloat("maxBias", maxBias);
+
+		//Bind g-buffer textures
+		glBindTextureUnit(0, gBuffer.colorBuffer[0]);
+		glBindTextureUnit(1, gBuffer.colorBuffer[1]);
+		glBindTextureUnit(2, gBuffer.colorBuffer[2]);
+		glBindTextureUnit(3, shadowFramebuffer.depthBuffer); //For shadow mapping
+
+		glBindVertexArray(dummyVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+
 
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer.fbo);
 		glBindTexture(GL_TEXTURE_2D, shadowFramebuffer.depthBuffer);
@@ -147,9 +183,9 @@ int main() {
 
 		//RENDER
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
-		glBindTextureUnit(3, brickTexture);
-		glBindTextureUnit(4, normalTexture);
-		glBindTextureUnit(5, shadowFramebuffer.depthBuffer);
+		glBindTextureUnit(0, brickTexture);
+		glBindTextureUnit(1, normalTexture);
+		glBindTextureUnit(2, shadowFramebuffer.depthBuffer);
 		glViewport(0, 0, screenWidth, screenHeight);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
@@ -161,6 +197,9 @@ int main() {
 		glCullFace(GL_BACK);
 
 		shader.use();
+		shader.setInt("_MainTex", 0);
+		shader.setInt("normalMap", 1);
+		shader.setInt("_ShadowMap", 2);
 		shader.setMat4("_Model", glm::mat4(1.0f));
 		shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 		shader.setMat4("_LightViewProj", lightCam.projectionMatrix() * lightCam.viewMatrix());
