@@ -117,8 +117,8 @@ int main() {
 
 	for (int i = 0; i < MAX_POINT_LIGHTS; i++)
 	{
-		pointLights[i].position = glm::vec3(i, i, i);
-		pointLights[i].radius = i;
+		pointLights[i].position = glm::vec3(i, 0, 0);
+		pointLights[i].radius = 10;
 		pointLights[i].color = glm::vec4(255, i, 0.0f, 1.0f);
 	}
 	
@@ -154,6 +154,7 @@ int main() {
 		//if using post processing, we draw to our offscreen framebuffer
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
 		glViewport(0, 0, framebuffer.width, framebuffer.height);
+		//glClearColor(0.6f, 0.8f, 0.92f, 1.0f); // uncomment for blue sky
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		deferredShader.use();
 		//TODO: Set the rest of your lighting uniforms for deferredShader. (same way we did this for lit.frag)
@@ -203,7 +204,6 @@ int main() {
 			sphereMesh.draw();
 		}
 
-
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer.fbo);
 		glBindTexture(GL_TEXTURE_2D, shadowFramebuffer.depthBuffer);
 		glViewport(0, 0, shadowWidth, shadowHeight);
@@ -223,13 +223,13 @@ int main() {
 		glBindTextureUnit(0, brickTexture);
 		glBindTextureUnit(1, normalTexture);
 		glBindTextureUnit(2, shadowFramebuffer.depthBuffer);
-		glViewport(0, 0, screenWidth, screenHeight);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//glViewport(0, 0, screenWidth, screenHeight);
+		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
 
 		// reset viewport
 		glViewport(0, 0, screenWidth, screenHeight);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_DEPTH_BUFFER_BIT);
 
 		glCullFace(GL_BACK);
 
