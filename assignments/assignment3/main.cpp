@@ -34,6 +34,14 @@ struct Material {
 	float Shininess = 128;
 }material;
 
+struct PointLight {
+	glm::vec3 position;
+	float radius;
+	glm::vec4 color;
+};
+const int MAX_POINT_LIGHTS = 64;
+PointLight pointLights[MAX_POINT_LIGHTS];
+
 
 //Global state
 int screenWidth = 1080;
@@ -61,10 +69,12 @@ int main() {
 	ew::Shader depthShader = ew::Shader("assets/depth.vert", "assets/depth.frag");
 	ew::Shader gShader = ew::Shader("assets/lit.vert", "assets/geometry.frag");
 	ew::Shader deferredShader = ew::Shader("assets/lit.vert", "assets/deferredLit.frag");
+	ew::Shader lightOrbShader = ew::Shader("assets/lightOrb.vert", "assets/lightOrb.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
 	ew::Transform planeTransform;
 	planeTransform.position = glm::vec3(0.0f, -1.0f, 0.0f);
+	ew::Mesh sphereMesh = ew::Mesh(ew::createSphere(1.0f, 8));
 
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
@@ -95,7 +105,6 @@ int main() {
 	GLuint brickTexture = ew::loadTexture("assets/travertine_color.jpg");
 	GLuint normalTexture = ew::loadTexture("assets/travertine_normal.jpg");
 
-	
 	//glBindTextureUnit(2, shadowFramebuffer.depthBuffer);
 
 	//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
@@ -105,6 +114,13 @@ int main() {
 	shader.setInt("_ShadowMap", 2);
 
 	postProcess.use();
+
+	for (int i = 0; i < MAX_POINT_LIGHTS; i++)
+	{
+		pointLights[i].position = glm::vec3(i, i, i);
+		pointLights[i].radius = i;
+		pointLights[i].color = glm::vec4(255, i, 0.0f, 1.0f);
+	}
 	
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -165,6 +181,27 @@ int main() {
 
 		glBindVertexArray(dummyVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		//Blit gBuffer depth to same framebuffer as fullscreen quad
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.fbo); //Read from gBuffer 
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, framebuffer.fbo); //Write to current fbo
+		glBlitFramebuffer(
+			0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST
+		);
+
+		//Draw all light orbs
+		lightOrbShader.use();
+		lightOrbShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
+		for (int i = 0; i < MAX_POINT_LIGHTS; i++)
+		{
+			glm::mat4 m = glm::mat4(1.0f);
+			m = glm::translate(m, pointLights[i].position);
+			m = glm::scale(m, glm::vec3(0.2f)); //Whatever radius you want
+
+			lightOrbShader.setMat4("_Model", m);
+			lightOrbShader.setVec3("_Color", pointLights[i].color);
+			sphereMesh.draw();
+		}
 
 
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer.fbo);

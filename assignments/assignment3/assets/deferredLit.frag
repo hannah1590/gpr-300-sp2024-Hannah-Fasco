@@ -33,6 +33,48 @@ uniform layout(binding = 0) sampler2D _gPositions;
 uniform layout(binding = 1) sampler2D _gNormals;
 uniform layout(binding = 2) sampler2D _gAlbedo;
 
+struct PointLight{
+	vec3 position;
+	float radius;
+	vec4 color;
+};
+#define MAX_POINT_LIGHTS 64
+uniform PointLight _PointLights[MAX_POINT_LIGHTS];
+
+//Linear falloff
+float attenuateLinear(float distance, float radius){
+	return clamp((radius-distance)/radius,0.0,1.0);
+}
+
+//Exponential falloff
+float attenuateExponential(float distance, float radius){
+	float i = clamp(1.0 - pow(distance/radius,4.0),0.0,1.0);
+	return i * i;
+	
+}
+
+vec3 calcPointLight(PointLight light,vec3 normal){
+	vec3 worldPos = texture(_gPositions,fs_in.UV).xyz;
+
+	vec3 diff = light.position - fs_in.WorldPos;
+	//Direction toward light position
+	vec3 toLight = normalize(diff);
+	//TODO: Usual blinn-phong calculations for diffuse + specular
+	float diffuseFactor = max(dot(normal,toLight),0.0);
+	//Calculate specularly reflected light
+	vec3 toEye = normalize(_EyePos - worldPos);
+	//Blinn-phong uses half angle
+	vec3 h = normalize(toLight + toEye);
+	float specularFactor = pow(max(dot(normal,h),0.0),_Material.Shininess);
+
+	vec4 lightColor = (diffuseFactor + specularFactor) * light.color;
+	//Attenuation
+	float d = length(diff); //Distance to light
+	lightColor *= attenuateLinear(d,light.radius); //See below for attenuation options
+	return vec3(lightColor);
+}
+
+
 float calcShadow(sampler2D shadowMap, vec4 lightSpacePos, float bias){
 	//Homogeneous Clip space to NDC [-w,w] to [-1,1]
     vec3 sampleCoord = lightSpacePos.xyz / lightSpacePos.w;
@@ -67,6 +109,10 @@ void main(){
 	vec3 worldPos = texture(_gPositions,fs_in.UV).xyz;
 	vec3 albedo = texture(_gAlbedo,fs_in.UV).xyz;
 
+	
+	//vec3 albedo = texture(_MainTex,fs_in.TexCoord);
+	//FragColor1 = vec4(albedo * totalLight,0);
+
 	//Make sure fragment normal is still length 1 after interpolation.
 	//vec3 normal = normalize(fs_in.WorldNormal);
 
@@ -93,5 +139,18 @@ void main(){
 	lightColor *= 1.0 - shadow;
 	lightColor+=_AmbientColor * _Material.Ka;
 	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
-	FragColor1 = vec4(albedo * lightColor,1.0);
+
+	PointLight mainLight;
+	mainLight.position = vec3(LightSpacePos);
+	mainLight.radius = 5;
+	mainLight.color = vec4(_LightColor, 1);
+
+	vec3 totalLight = vec3(0);
+	totalLight+=calcPointLight(mainLight,normal);
+	for(int i=0;i<MAX_POINT_LIGHTS;i++){
+		totalLight+=calcPointLight(_PointLights[i],normal);
+	}
+
+	FragColor1 = vec4(albedo * totalLight,1.0);
+	
 }
