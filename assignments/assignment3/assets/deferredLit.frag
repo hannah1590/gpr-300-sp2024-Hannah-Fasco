@@ -1,7 +1,6 @@
 #version 450
 layout(location = 0) out vec4 FragColor1; //GL_COLOR_ATTACHMNENT0
 in vec4 LightSpacePos;
-//in vec2 UV; //From fsTriangle.vert
 
 in Surface{
 	vec3 WorldPos; //Vertex position in world space
@@ -28,52 +27,6 @@ struct Material{
 	float Shininess; //Affects size of specular highlight
 };
 uniform Material _Material;
-
-uniform layout(binding = 0) sampler2D _gPositions;
-uniform layout(binding = 1) sampler2D _gNormals;
-uniform layout(binding = 2) sampler2D _gAlbedo;
-
-struct PointLight{
-	vec3 position;
-	float radius;
-	vec4 color;
-};
-#define MAX_POINT_LIGHTS 64
-uniform PointLight _PointLights[MAX_POINT_LIGHTS];
-
-//Linear falloff
-float attenuateLinear(float distance, float radius){
-	return clamp((radius-distance)/radius,0.0,1.0);
-}
-
-//Exponential falloff
-float attenuateExponential(float distance, float radius){
-	float i = clamp(1.0 - pow(distance/radius,4.0),0.0,1.0);
-	return i * i;
-	
-}
-
-vec3 calcPointLight(PointLight light,vec3 normal){
-	vec3 worldPos = texture(_gPositions,fs_in.UV).xyz;
-
-	vec3 diff = light.position - fs_in.WorldPos;
-	//Direction toward light position
-	vec3 toLight = normalize(diff);
-	//TODO: Usual blinn-phong calculations for diffuse + specular
-	float diffuseFactor = max(dot(normal,toLight),0.0);
-	//Calculate specularly reflected light
-	vec3 toEye = normalize(_EyePos - worldPos);
-	//Blinn-phong uses half angle
-	vec3 h = normalize(toLight + toEye);
-	float specularFactor = pow(max(dot(normal,h),0.0),_Material.Shininess);
-
-	vec4 lightColor = (diffuseFactor + specularFactor) * light.color;
-	//Attenuation
-	float d = length(diff); //Distance to light
-	lightColor *= attenuateLinear(d,light.radius); //See below for attenuation options
-	return vec3(lightColor);
-}
-
 
 float calcShadow(sampler2D shadowMap, vec4 lightSpacePos, float bias){
 	//Homogeneous Clip space to NDC [-w,w] to [-1,1]
@@ -103,42 +56,55 @@ float calcShadow(sampler2D shadowMap, vec4 lightSpacePos, float bias){
 	return totalShadow;
 }
 
-void main(){
-	//Sample surface properties for this screen pixel
-	vec3 normal = texture(_gNormals,fs_in.UV).xyz;
-	vec3 worldPos = texture(_gPositions,fs_in.UV).xyz;
-	vec3 albedo = texture(_gAlbedo,fs_in.UV).xyz;
+uniform layout(binding = 0) sampler2D _gPositions;
+uniform layout(binding = 1) sampler2D _gNormals;
+uniform layout(binding = 2) sampler2D _gAlbedo;
 
+struct PointLight{
+	vec3 position;
+	float radius;
+	vec4 color;
+};
+#define MAX_POINT_LIGHTS 64
+uniform PointLight _PointLights[MAX_POINT_LIGHTS];
+
+//Linear falloff
+float attenuateLinear(float distance, float radius){
+	return clamp((radius-distance)/radius,0.0,1.0);
+}
+
+//Exponential falloff
+float attenuateExponential(float distance, float radius){
+	float i = clamp(1.0 - pow(distance/radius,4.0),0.0,1.0);
+	return i * i;
 	
-	//vec3 albedo = texture(_MainTex,fs_in.TexCoord);
-	//FragColor1 = vec4(albedo * totalLight,0);
+}
 
-	//Make sure fragment normal is still length 1 after interpolation.
-	//vec3 normal = normalize(fs_in.WorldNormal);
+vec3 calcPointLight(PointLight light,vec3 normal){
+	vec3 worldPos = texture(_gPositions,fs_in.UV).xyz;
 
-	vec3 lightDir = _LightDirection;
-
-	normal = texture(normalMap, fs_in.TexCoord).rgb;
-	normal = normal * 2.0 - 1.0;   
-	normal = normalize(fs_in.TBN * normal); 
-
-	//Light pointing straight down
-	vec3 toLight = -lightDir;
+	vec3 diff = light.position - worldPos;
+	//Direction toward light position
+	vec3 toLight = normalize(diff);
+	//TODO: Usual blinn-phong calculations for diffuse + specular
 	float diffuseFactor = max(dot(normal,toLight),0.0);
 	//Calculate specularly reflected light
 	vec3 toEye = normalize(_EyePos - worldPos);
 	//Blinn-phong uses half angle
 	vec3 h = normalize(toLight + toEye);
 	float specularFactor = pow(max(dot(normal,h),0.0),_Material.Shininess);
-	//Combination of specular and diffuse reflection
-	vec3 lightColor = (_Material.Kd * diffuseFactor + _Material.Ks * specularFactor) * _LightColor;
 
-	float bias = max(maxBias * (1.0 - dot(normal, toLight)), minBias);
-	float shadow = calcShadow(_ShadowMap, LightSpacePos, bias); 
+	vec3 lightColor = (diffuseFactor + specularFactor) * vec3(light.color);
+	//Attenuation
+	float d = length(diff); //Distance to light
 
-	lightColor *= 1.0 - shadow;
-	lightColor+=_AmbientColor * _Material.Ka;
-	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
+	lightColor *= attenuateLinear(d,light.radius); //See below for attenuation options
+	return lightColor;
+}
+
+void main(){
+	//vec3 normal = normalize(fs_in.WorldNormal);
+	vec3 normal = texture(_gNormals,fs_in.UV).xyz;
 
 	PointLight mainLight;
 	mainLight.position = vec3(LightSpacePos);
@@ -150,7 +116,6 @@ void main(){
 	for(int i=0;i<MAX_POINT_LIGHTS;i++){
 		totalLight+=calcPointLight(_PointLights[i],normal);
 	}
-
+	vec3 albedo = texture(_gAlbedo,fs_in.UV).xyz;
 	FragColor1 = vec4(albedo * totalLight,1.0);
-	
 }

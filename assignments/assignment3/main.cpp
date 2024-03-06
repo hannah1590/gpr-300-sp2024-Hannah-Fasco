@@ -18,6 +18,8 @@
 
 #include <hannah/framebuffer.h>
 
+#include <time.h> 
+
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI();
@@ -60,6 +62,7 @@ float maxBias = 0.015f;
 
 hannah::Framebuffer shadowFramebuffer;
 hannah::Framebuffer gBuffer;
+
 int main() {
 	GLFWwindow* window = initWindow("Assignment 3", screenWidth, screenHeight);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
@@ -115,13 +118,14 @@ int main() {
 
 	postProcess.use();
 
+	srand(time(0));
 	for (int i = 0; i < MAX_POINT_LIGHTS; i++)
 	{
-		pointLights[i].position = glm::vec3(i, 0, 0);
+		pointLights[i].position = glm::vec3(i - 25, 0, i % 8);
 		pointLights[i].radius = 10;
-		pointLights[i].color = glm::vec4(255, i, 0.0f, 1.0f);
+		pointLights[i].color = glm::vec4(rand() % 100, rand() % 100, rand() % 100, rand() % 100) * 0.01f;
 	}
-	
+
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
@@ -152,12 +156,22 @@ int main() {
 		//After geometry pass
 		//LIGHTING PASS
 		//if using post processing, we draw to our offscreen framebuffer
+		lightCam.position = (lightCam.target - glm::normalize(lightDir)) * 5.0f;
+
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
 		glViewport(0, 0, framebuffer.width, framebuffer.height);
 		//glClearColor(0.6f, 0.8f, 0.92f, 1.0f); // uncomment for blue sky
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		deferredShader.use();
 		//TODO: Set the rest of your lighting uniforms for deferredShader. (same way we did this for lit.frag)
+		for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
+			//Creates prefix "_PointLights[0]." etc
+			std::string prefix = "_PointLights[" + std::to_string(i) + "].";
+			deferredShader.setVec3(prefix + "position", pointLights[i].position);
+			deferredShader.setVec3(prefix + "color", pointLights[i].color);
+			deferredShader.setFloat(prefix + "radius", pointLights[i].radius);
+		}
+
 		deferredShader.setInt("_MainTex", 0);
 		deferredShader.setInt("normalMap", 1);
 		deferredShader.setInt("_ShadowMap", 2);
@@ -212,7 +226,7 @@ int main() {
 		glCullFace(GL_FRONT);
 
 		//lightDir = glm::normalize(lightCam.target - lightCam.position);
-		lightCam.position = (lightCam.target - glm::normalize(lightDir)) * 5.0f;
+		
 		depthShader.use();
 		depthShader.setMat4("_ViewProjection", lightCam.projectionMatrix() * lightCam.viewMatrix());
 		depthShader.setMat4("_Model", monkeyTransform.modelMatrix());
