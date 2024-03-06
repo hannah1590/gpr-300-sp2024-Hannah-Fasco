@@ -1,13 +1,13 @@
 #version 450
 layout(location = 0) out vec4 FragColor1; //GL_COLOR_ATTACHMNENT0
 in vec4 LightSpacePos;
+in vec2 UV; //From fsTriangle.vert
 
 in Surface{
 	vec3 WorldPos; //Vertex position in world space
 	vec3 WorldNormal; //Vertex normal in world space
 	vec2 TexCoord;
 	mat3 TBN;
-	vec2 UV;
 }fs_in;
 
 uniform sampler2D _MainTex; 
@@ -81,7 +81,7 @@ float attenuateExponential(float distance, float radius){
 }
 
 vec3 calcPointLight(PointLight light,vec3 normal){
-	vec3 worldPos = texture(_gPositions,fs_in.UV).xyz;
+	vec3 worldPos = texture(_gPositions,UV).xyz;
 
 	vec3 diff = light.position - worldPos;
 	//Direction toward light position
@@ -104,7 +104,7 @@ vec3 calcPointLight(PointLight light,vec3 normal){
 
 void main(){
 	//vec3 normal = normalize(fs_in.WorldNormal);
-	vec3 normal = texture(_gNormals,fs_in.UV).xyz;
+	vec3 normal = texture(_gNormals,UV).xyz;
 
 	PointLight mainLight;
 	mainLight.position = vec3(LightSpacePos);
@@ -112,10 +112,10 @@ void main(){
 	mainLight.color = vec4(_LightColor, 1);
 
 	vec3 totalLight = vec3(0);
-	totalLight+=calcPointLight(mainLight,normal);
-	for(int i=0;i<MAX_POINT_LIGHTS;i++){
-		totalLight+=calcPointLight(_PointLights[i],normal);
+	totalLight += calcPointLight(mainLight,normal);
+	for(int i = 0; i < MAX_POINT_LIGHTS; i++){
+		totalLight += calcPointLight(_PointLights[i], normal);
 	}
-	vec3 albedo = texture(_gAlbedo,fs_in.UV).xyz;
+	vec3 albedo = texture(_gAlbedo,UV).xyz;
 	FragColor1 = vec4(albedo * totalLight,1.0);
 }

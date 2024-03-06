@@ -7,7 +7,6 @@ in Surface{
 	vec3 WorldNormal; //Vertex normal in world space
 	vec2 TexCoord;
 	mat3 TBN;
-	vec2 UV;
 }fs_in;
 
 uniform sampler2D _MainTex; 

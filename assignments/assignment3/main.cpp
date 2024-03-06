@@ -119,13 +119,20 @@ int main() {
 	postProcess.use();
 
 	srand(time(0));
+	/*
 	for (int i = 0; i < MAX_POINT_LIGHTS; i++)
 	{
-		pointLights[i].position = glm::vec3(i - 25, 0, i % 8);
+		pointLights[i].position = glm::vec3(i - 25, 0, (i % 8) - 3);
 		pointLights[i].radius = 10;
 		pointLights[i].color = glm::vec4(rand() % 100, rand() % 100, rand() % 100, rand() % 100) * 0.01f;
 	}
-
+*/
+	for (int i = 0; i < MAX_POINT_LIGHTS; i++)
+	{
+		pointLights[i].position = glm::vec3(1);
+		pointLights[i].radius = 10;
+		pointLights[i].color = glm::vec4(rand() % 100, rand() % 100, rand() % 100, rand() % 100) * 0.01f;
+	}
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
@@ -162,7 +169,9 @@ int main() {
 		glViewport(0, 0, framebuffer.width, framebuffer.height);
 		//glClearColor(0.6f, 0.8f, 0.92f, 1.0f); // uncomment for blue sky
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 		deferredShader.use();
+
 		//TODO: Set the rest of your lighting uniforms for deferredShader. (same way we did this for lit.frag)
 		for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
 			//Creates prefix "_PointLights[0]." etc
@@ -239,11 +248,11 @@ int main() {
 		glBindTextureUnit(2, shadowFramebuffer.depthBuffer);
 		//glViewport(0, 0, screenWidth, screenHeight);
 		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
+		//glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
 
 		// reset viewport
 		glViewport(0, 0, screenWidth, screenHeight);
-		glClear(GL_DEPTH_BUFFER_BIT);
+		//glClear(GL_DEPTH_BUFFER_BIT);
 
 		glCullFace(GL_BACK);
 
