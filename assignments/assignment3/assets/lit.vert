@@ -18,6 +18,7 @@ out Surface{
 uniform mat4 _LightViewProj; //view + projection of light source camera
 out vec4 LightSpacePos; //Sent to fragment shader
 
+
 void main(){
 	//Transform vertex position to World Space.
 	vs_out.WorldPos = vec3(_Model * vec4(vPos,1.0));

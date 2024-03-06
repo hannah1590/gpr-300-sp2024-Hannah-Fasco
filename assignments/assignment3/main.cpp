@@ -71,7 +71,7 @@ int main() {
 	ew::Shader postProcess = ew::Shader("assets/post.vert", "assets/post.frag");
 	ew::Shader depthShader = ew::Shader("assets/depth.vert", "assets/depth.frag");
 	ew::Shader gShader = ew::Shader("assets/lit.vert", "assets/geometry.frag");
-	ew::Shader deferredShader = ew::Shader("assets/lit.vert", "assets/deferredLit.frag");
+	ew::Shader deferredShader = ew::Shader("assets/deferredLit.vert", "assets/deferredLit.frag");
 	ew::Shader lightOrbShader = ew::Shader("assets/lightOrb.vert", "assets/lightOrb.frag");
 	ew::Model monkeyModel = ew::Model("assets/suzanne.fbx");
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
@@ -126,7 +126,7 @@ int main() {
 		pointLights[i].radius = 10;
 		pointLights[i].color = glm::vec4(rand() % 100, rand() % 100, rand() % 100, rand() % 100) * 0.01f;
 	}
-*/
+   */
 	for (int i = 0; i < MAX_POINT_LIGHTS; i++)
 	{
 		pointLights[i].position = glm::vec3(1);
@@ -139,6 +139,7 @@ int main() {
 		float time = (float)glfwGetTime();
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
+
 
 		//RENDER SCENE TO G-BUFFER
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
@@ -159,6 +160,9 @@ int main() {
 		planeMesh.draw();
 		gShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
+
+		
+
 
 		//After geometry pass
 		//LIGHTING PASS
@@ -181,12 +185,6 @@ int main() {
 			deferredShader.setFloat(prefix + "radius", pointLights[i].radius);
 		}
 
-		deferredShader.setInt("_MainTex", 0);
-		deferredShader.setInt("normalMap", 1);
-		deferredShader.setInt("_ShadowMap", 2);
-		deferredShader.setMat4("_Model", glm::mat4(1.0f));
-		deferredShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
-		deferredShader.setMat4("_LightViewProj", lightCam.projectionMatrix() * lightCam.viewMatrix());
 		deferredShader.setVec3("_EyePos", camera.position);
 		deferredShader.setVec3("_LightDirection", glm::normalize(lightDir));
 		deferredShader.setFloat("_Material.Ka", material.Ka);
@@ -226,6 +224,7 @@ int main() {
 			lightOrbShader.setVec3("_Color", pointLights[i].color);
 			sphereMesh.draw();
 		}
+
 
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer.fbo);
 		glBindTexture(GL_TEXTURE_2D, shadowFramebuffer.depthBuffer);

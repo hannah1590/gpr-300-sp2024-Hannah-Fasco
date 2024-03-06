@@ -1,17 +1,7 @@
 #version 450
 layout(location = 0) out vec4 FragColor1; //GL_COLOR_ATTACHMNENT0
-in vec4 LightSpacePos;
 in vec2 UV; //From fsTriangle.vert
 
-in Surface{
-	vec3 WorldPos; //Vertex position in world space
-	vec3 WorldNormal; //Vertex normal in world space
-	vec2 TexCoord;
-	mat3 TBN;
-}fs_in;
-
-uniform sampler2D _MainTex; 
-uniform sampler2D normalMap; 
 uniform sampler2D _ShadowMap;
 uniform vec3 _EyePos;
 uniform vec3 _LightDirection;// = vec3(0.0,-1.0,0.0);
@@ -107,7 +97,7 @@ void main(){
 	vec3 normal = texture(_gNormals,UV).xyz;
 
 	PointLight mainLight;
-	mainLight.position = vec3(LightSpacePos);
+	mainLight.position = vec3(0);
 	mainLight.radius = 5;
 	mainLight.color = vec4(_LightColor, 1);
 
