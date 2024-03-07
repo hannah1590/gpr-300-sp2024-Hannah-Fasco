@@ -9,6 +9,7 @@ uniform vec3 _LightColor = vec3(1.0);
 uniform vec3 _AmbientColor = vec3(0.3,0.4,0.46);
 uniform float minBias;
 uniform float maxBias;
+uniform vec3 lightPos;
 
 struct Material{
 	float Ka; //Ambient coefficient (0-1)
@@ -53,7 +54,7 @@ uniform layout(binding = 2) sampler2D _gAlbedo;
 struct PointLight{
 	vec3 position;
 	float radius;
-	vec4 color;
+	vec3 color;
 };
 #define MAX_POINT_LIGHTS 64
 uniform PointLight _PointLights[MAX_POINT_LIGHTS];
@@ -84,11 +85,11 @@ vec3 calcPointLight(PointLight light,vec3 normal){
 	vec3 h = normalize(toLight + toEye);
 	float specularFactor = pow(max(dot(normal,h),0.0),_Material.Shininess);
 
-	vec3 lightColor = (diffuseFactor + specularFactor) * vec3(light.color);
+	vec3 lightColor = (diffuseFactor + specularFactor) * light.color;
 	//Attenuation
 	float d = length(diff); //Distance to light
 
-	lightColor *= attenuateLinear(d,light.radius); //See below for attenuation options
+	lightColor *= attenuateExponential(d,light.radius); //See below for attenuation options
 	return lightColor;
 }
 
@@ -96,10 +97,11 @@ void main(){
 	//vec3 normal = normalize(fs_in.WorldNormal);
 	vec3 normal = texture(_gNormals,UV).xyz;
 
+
 	PointLight mainLight;
-	mainLight.position = vec3(0);
+	mainLight.position = vec3(lightPos);
 	mainLight.radius = 5;
-	mainLight.color = vec4(_LightColor, 1);
+	mainLight.color = (_LightColor);
 
 	vec3 totalLight = vec3(0);
 	totalLight += calcPointLight(mainLight,normal);
@@ -107,5 +109,6 @@ void main(){
 		totalLight += calcPointLight(_PointLights[i], normal);
 	}
 	vec3 albedo = texture(_gAlbedo,UV).xyz;
-	FragColor1 = vec4(albedo * totalLight,1.0);
+	FragColor1 = vec4(albedo * totalLight, 1);
+	//FragColor1 = _PointLights[0].color;
 }

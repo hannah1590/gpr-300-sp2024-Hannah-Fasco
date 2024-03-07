@@ -77,6 +77,7 @@ int main() {
 	ew::Mesh planeMesh = ew::Mesh(ew::createPlane(10, 10, 5));
 	ew::Transform planeTransform;
 	planeTransform.position = glm::vec3(0.0f, -1.0f, 0.0f);
+	planeTransform.scale = glm::vec3(10.0f);
 	ew::Mesh sphereMesh = ew::Mesh(ew::createSphere(1.0f, 8));
 
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
@@ -89,8 +90,7 @@ int main() {
 	lightCam.orthoHeight = 5;
 	
 	lightCam.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
-	lightCam.position = (lightCam.target - glm::normalize(lightDir)) * 5.0f;//glm::normalize(lightDir - lightCam.target);
-	//lightDir = glm::normalize(lightCam.target - lightCam.position);
+	lightCam.position = (lightCam.target - glm::normalize(lightDir)) * 5.0f;
 	lightCam.farPlane = 10.0f;
 
 	glEnable(GL_CULL_FACE);
@@ -100,7 +100,7 @@ int main() {
 	unsigned int dummyVAO;
 	glCreateVertexArrays(1, &dummyVAO);
 
-	hannah::Framebuffer framebuffer = hannah::createFramebufferWithRBO(screenWidth, screenHeight, GL_RGB16F);
+	hannah::Framebuffer framebuffer = hannah::createFramebufferWithDepthBuffer(screenWidth, screenHeight, GL_RGB16F);
 	shadowFramebuffer = hannah::createFramebufferWithShadowMap(shadowWidth, shadowHeight, GL_RGB16F);
 	gBuffer = hannah::createGBuffer(screenWidth, screenHeight);
 
@@ -108,31 +108,21 @@ int main() {
 	GLuint brickTexture = ew::loadTexture("assets/travertine_color.jpg");
 	GLuint normalTexture = ew::loadTexture("assets/travertine_normal.jpg");
 
-	//glBindTextureUnit(2, shadowFramebuffer.depthBuffer);
-
 	//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
 	shader.use();
 	shader.setInt("_MainTex", 0);
 	shader.setInt("normalMap", 1);
 	shader.setInt("_ShadowMap", 2);
 
-	postProcess.use();
-
 	srand(time(0));
-	/*
+	
 	for (int i = 0; i < MAX_POINT_LIGHTS; i++)
 	{
 		pointLights[i].position = glm::vec3(i - 25, 0, (i % 8) - 3);
-		pointLights[i].radius = 10;
-		pointLights[i].color = glm::vec4(rand() % 100, rand() % 100, rand() % 100, rand() % 100) * 0.01f;
+		pointLights[i].radius = 5;
+		pointLights[i].color = glm::vec4(rand() % 100, rand() % 100, rand() % 100, 100) * 0.01f;
 	}
-   */
-	for (int i = 0; i < MAX_POINT_LIGHTS; i++)
-	{
-		pointLights[i].position = glm::vec3(1);
-		pointLights[i].radius = 10;
-		pointLights[i].color = glm::vec4(rand() % 100, rand() % 100, rand() % 100, rand() % 100) * 0.01f;
-	}
+
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
@@ -140,16 +130,12 @@ int main() {
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
 
-
 		//RENDER SCENE TO G-BUFFER
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
 		glViewport(0, 0, gBuffer.width, gBuffer.height);
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		//glBindTextureUnit(0, gBuffer.colorBuffer[0]);
-		//glBindTextureUnit(1, gBuffer.colorBuffer[1]);
-		//glBindTextureUnit(2, gBuffer.colorBuffer[2]);
 		glBindTextureUnit(0, brickTexture);
 		glBindTextureUnit(1, normalTexture);
 
@@ -161,9 +147,6 @@ int main() {
 		gShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		monkeyModel.draw();
 
-		
-
-
 		//After geometry pass
 		//LIGHTING PASS
 		//if using post processing, we draw to our offscreen framebuffer
@@ -171,12 +154,10 @@ int main() {
 
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer.fbo);
 		glViewport(0, 0, framebuffer.width, framebuffer.height);
-		//glClearColor(0.6f, 0.8f, 0.92f, 1.0f); // uncomment for blue sky
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		deferredShader.use();
 
-		//TODO: Set the rest of your lighting uniforms for deferredShader. (same way we did this for lit.frag)
 		for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
 			//Creates prefix "_PointLights[0]." etc
 			std::string prefix = "_PointLights[" + std::to_string(i) + "].";
@@ -185,6 +166,7 @@ int main() {
 			deferredShader.setFloat(prefix + "radius", pointLights[i].radius);
 		}
 
+		deferredShader.setVec3("lightPos", lightCam.position);
 		deferredShader.setVec3("_EyePos", camera.position);
 		deferredShader.setVec3("_LightDirection", glm::normalize(lightDir));
 		deferredShader.setFloat("_Material.Ka", material.Ka);
@@ -210,7 +192,6 @@ int main() {
 		glBlitFramebuffer(
 			0, 0, screenWidth, screenHeight, 0, 0, screenWidth, screenHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST
 		);
-
 		//Draw all light orbs
 		lightOrbShader.use();
 		lightOrbShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
@@ -225,7 +206,6 @@ int main() {
 			sphereMesh.draw();
 		}
 
-
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer.fbo);
 		glBindTexture(GL_TEXTURE_2D, shadowFramebuffer.depthBuffer);
 		glViewport(0, 0, shadowWidth, shadowHeight);
@@ -233,8 +213,6 @@ int main() {
 
 		glCullFace(GL_FRONT);
 
-		//lightDir = glm::normalize(lightCam.target - lightCam.position);
-		
 		depthShader.use();
 		depthShader.setMat4("_ViewProjection", lightCam.projectionMatrix() * lightCam.viewMatrix());
 		depthShader.setMat4("_Model", monkeyTransform.modelMatrix());
@@ -286,7 +264,7 @@ int main() {
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	
 		postProcess.use();
 		postProcess.setFloat("gamma", gamma);
 
