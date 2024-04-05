@@ -19,10 +19,12 @@
 #include <hannah/framebuffer.h>
 
 #include <time.h> 
+#include "vector"
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
 void drawUI();
+
 
 ew::Camera camera;
 ew::Transform monkeyTransform;
@@ -44,6 +46,48 @@ struct PointLight {
 const int MAX_POINT_LIGHTS = 64;
 PointLight pointLights[MAX_POINT_LIGHTS];
 
+struct Transform {
+	glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f);
+	glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+	glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
+
+	glm::mat4 modelMatrix() const {
+		glm::mat4 m = glm::mat4(1.0f);
+		m = glm::translate(m, position);
+		m *= glm::mat4_cast(rotation);
+		m = glm::scale(m, scale);
+		return m;
+	}
+};
+
+struct Node {
+	glm::mat4 localTransform;
+	glm::mat4 globalTransform;
+	unsigned int parentIndex;
+	Transform transform;
+};
+
+struct Hierarchy
+{
+	std::vector<Node*> nodes;
+	unsigned int nodeCount;
+};
+
+//Assumes list is ordered by depth
+void SolveFK(Hierarchy hierarchy)
+{
+	for each (Node *node in hierarchy.nodes)
+	{
+		if (node->parentIndex == -1)
+		{
+			node->globalTransform = node->localTransform;
+		}
+		else
+		{
+			node->globalTransform = hierarchy.nodes[node->parentIndex]->globalTransform * node->localTransform;
+		}
+	}
+}
 
 //Global state
 int screenWidth = 1080;
@@ -123,12 +167,37 @@ int main() {
 		pointLights[i].color = glm::vec4(rand() % 100, rand() % 100, rand() % 100, 100) * 0.01f;
 	}
 
+	Node head;
+	Node body;
+	head.parentIndex = -1;
+	body.parentIndex = 0;
+
+	Hierarchy hierarchy;
+	hierarchy.nodes.push_back(&head);
+	hierarchy.nodeCount++;
+	hierarchy.nodes.push_back(&body);
+	hierarchy.nodeCount++;
+
+	head.transform.scale = glm::vec3(0.5f);
+	body.transform.scale = glm::vec3(1.0f);
+	body.transform.position = glm::vec3(0, 2.0f, 0.0f);
+
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
 		float time = (float)glfwGetTime();
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
+
+		//head.transform.position = glm::vec3(glm::sin(deltaTime) * 10);
+
+		head.transform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
+
+		head.localTransform = head.transform.modelMatrix();
+		body.localTransform = body.transform.modelMatrix();
+
+		SolveFK(hierarchy);
+
 
 		//RENDER SCENE TO G-BUFFER
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
@@ -144,8 +213,13 @@ int main() {
 		gShader.setMat4("_LightViewProj", lightCam.projectionMatrix() * lightCam.viewMatrix());
 		gShader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
-		gShader.setMat4("_Model", monkeyTransform.modelMatrix());
+		//gShader.setMat4("_Model", monkeyTransform.modelMatrix());
+		//monkeyModel.draw();
+		gShader.setMat4("_Model", head.globalTransform);
 		monkeyModel.draw();
+		gShader.setMat4("_Model", body.globalTransform);
+		monkeyModel.draw();
+
 
 		//After geometry pass
 		//LIGHTING PASS
@@ -253,8 +327,10 @@ int main() {
 		shader.setMat4("_Model", planeTransform.modelMatrix());
 		planeMesh.draw();
 
-		shader.setMat4("_Model", monkeyTransform.modelMatrix());
-		monkeyModel.draw(); //Draws monkey model using current shader
+		//shader.setMat4("_Model", monkeyTransform.modelMatrix());
+		//monkeyModel.draw(); //Draws monkey model using current shader
+
+		
 		
 		//Rotate model around Y axis
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
@@ -280,6 +356,8 @@ int main() {
 	}
 	printf("Shutting down...");
 }
+
+
 
 void resetCamera(ew::Camera* camera, ew::CameraController* controller) {
 	camera->position = glm::vec3(0, 0, 5.0f);
