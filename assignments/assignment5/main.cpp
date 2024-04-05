@@ -167,20 +167,78 @@ int main() {
 		pointLights[i].color = glm::vec4(rand() % 100, rand() % 100, rand() % 100, 100) * 0.01f;
 	}
 
-	Node head;
+	
 	Node body;
-	head.parentIndex = -1;
-	body.parentIndex = 0;
+
+	Node topJoint;
+	Node topElbow;
+	Node topWrist;
+
+	Node bottomJoint;
+	Node bottomElbow;
+	Node bottomWrist;
+
+	Node rightSholder;
+	Node leftSholder;
 
 	Hierarchy hierarchy;
-	hierarchy.nodes.push_back(&head);
-	hierarchy.nodeCount++;
-	hierarchy.nodes.push_back(&body);
+	hierarchy.nodes.push_back(&body);         // index = 0
 	hierarchy.nodeCount++;
 
-	head.transform.scale = glm::vec3(0.5f);
-	body.transform.scale = glm::vec3(1.0f);
-	body.transform.position = glm::vec3(0, 2.0f, 0.0f);
+	hierarchy.nodes.push_back(&topJoint);     // index = 1
+	hierarchy.nodeCount++;
+	hierarchy.nodes.push_back(&topElbow);     // index = 2
+	hierarchy.nodeCount++;
+	hierarchy.nodes.push_back(&topWrist);     // index = 3
+	hierarchy.nodeCount++;
+
+	hierarchy.nodes.push_back(&bottomJoint);  // index = 4
+	hierarchy.nodeCount++;
+	hierarchy.nodes.push_back(&bottomElbow);  // index = 5
+	hierarchy.nodeCount++;
+	hierarchy.nodes.push_back(&bottomWrist);  // index = 6
+	hierarchy.nodeCount++;
+
+	hierarchy.nodes.push_back(&rightSholder); // index = 7
+	hierarchy.nodeCount++;
+	hierarchy.nodes.push_back(&leftSholder);  // index = 8
+	hierarchy.nodeCount++;
+
+	body.parentIndex = -1;
+
+	topJoint.parentIndex = 0;
+	topElbow.parentIndex = 1;
+	topWrist.parentIndex = 2;
+
+	bottomJoint.parentIndex = 0;
+	bottomElbow.parentIndex = 4;
+	bottomWrist.parentIndex = 5;
+
+	rightSholder.parentIndex = 0;
+	leftSholder.parentIndex = 0;
+	
+	body.transform.scale = glm::vec3(0.5f);
+	topJoint.transform.scale = glm::vec3(0.5f);
+	topElbow.transform.scale = glm::vec3(0.5f);
+	topWrist.transform.scale = glm::vec3(0.5f);
+
+	bottomJoint.transform.scale = glm::vec3(0.5f);
+	bottomElbow.transform.scale = glm::vec3(0.5f);
+	bottomWrist.transform.scale = glm::vec3(0.5f);
+
+	rightSholder.transform.scale = glm::vec3(0.3f);
+	leftSholder.transform.scale = glm::vec3(0.3f);
+
+	body.transform.position = glm::vec3(0, 1.0f, 0.0f);
+	topJoint.transform.position = glm::vec3(0, 2.0f, 0.0f);
+	topElbow.transform.position = glm::vec3(2.0, 0.0f, 0.0f);
+	topWrist.transform.position = glm::vec3(2.0, 0.0f, 0.0f);
+	bottomJoint.transform.position = glm::vec3(0, -2.0f, 0.0f);
+	bottomElbow.transform.position = glm::vec3(-2.0, 0.0f, 0.0f);
+	bottomWrist.transform.position = glm::vec3(-2.0, 0.0f, 0.0f);
+
+	//rightSholder.transform.position = glm::vec3(2.0, 0.0f, 0.0f);
+	//leftSholder.transform.position = glm::vec3(-2.0, 0.0f, 0.0f);
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -189,15 +247,19 @@ int main() {
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
 
-		//head.transform.position = glm::vec3(glm::sin(deltaTime) * 10);
+		topJoint.transform.rotation = glm::rotate(topJoint.transform.rotation, deltaTime * 5, glm::vec3(0.0, 1.0, 0.0));
+		bottomJoint.transform.rotation = glm::rotate(bottomJoint.transform.rotation, deltaTime, glm::vec3(0.0, -1.0, 0.0));
+		rightSholder.transform.position = glm::vec3(2.0, glm::sin(time * 2) * 0.5, 0.0f);
+		leftSholder.transform.position = glm::vec3(-2.0, glm::sin(time * 2) * 0.5, 0.0f);
 
-		head.transform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
+		for each (Node *node in hierarchy.nodes)
+		{
+			node->localTransform = node->transform.modelMatrix();
+		}
 
-		head.localTransform = head.transform.modelMatrix();
-		body.localTransform = body.transform.modelMatrix();
+		body.localTransform = glm::rotate(body.localTransform, time, glm::vec3(1.0, 0.0, 1.0));
 
 		SolveFK(hierarchy);
-
 
 		//RENDER SCENE TO G-BUFFER
 		glBindFramebuffer(GL_FRAMEBUFFER, gBuffer.fbo);
@@ -215,11 +277,11 @@ int main() {
 		planeMesh.draw();
 		//gShader.setMat4("_Model", monkeyTransform.modelMatrix());
 		//monkeyModel.draw();
-		gShader.setMat4("_Model", head.globalTransform);
-		monkeyModel.draw();
-		gShader.setMat4("_Model", body.globalTransform);
-		monkeyModel.draw();
-
+		for each (Node * node in hierarchy.nodes)
+		{
+			gShader.setMat4("_Model", node->globalTransform);
+			monkeyModel.draw();
+		}
 
 		//After geometry pass
 		//LIGHTING PASS
@@ -330,7 +392,11 @@ int main() {
 		//shader.setMat4("_Model", monkeyTransform.modelMatrix());
 		//monkeyModel.draw(); //Draws monkey model using current shader
 
-		
+		for each (Node * node in hierarchy.nodes)
+		{
+			shader.setMat4("_Model", node->globalTransform);
+			monkeyModel.draw();
+		}
 		
 		//Rotate model around Y axis
 		monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
