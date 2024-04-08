@@ -178,30 +178,30 @@ int main() {
 	Node bottomElbow;
 	Node bottomWrist;
 
-	Node rightSholder;
-	Node leftSholder;
+	Node rightShoulder;
+	Node leftShoulder;
 
 	Hierarchy hierarchy;
-	hierarchy.nodes.push_back(&body);         // index = 0
+	hierarchy.nodes.push_back(&body);          // index = 0
 	hierarchy.nodeCount++;
 
-	hierarchy.nodes.push_back(&topJoint);     // index = 1
+	hierarchy.nodes.push_back(&topJoint);      // index = 1
 	hierarchy.nodeCount++;
-	hierarchy.nodes.push_back(&topElbow);     // index = 2
+	hierarchy.nodes.push_back(&topElbow);      // index = 2
 	hierarchy.nodeCount++;
-	hierarchy.nodes.push_back(&topWrist);     // index = 3
-	hierarchy.nodeCount++;
-
-	hierarchy.nodes.push_back(&bottomJoint);  // index = 4
-	hierarchy.nodeCount++;
-	hierarchy.nodes.push_back(&bottomElbow);  // index = 5
-	hierarchy.nodeCount++;
-	hierarchy.nodes.push_back(&bottomWrist);  // index = 6
+	hierarchy.nodes.push_back(&topWrist);      // index = 3
 	hierarchy.nodeCount++;
 
-	hierarchy.nodes.push_back(&rightSholder); // index = 7
+	hierarchy.nodes.push_back(&bottomJoint);   // index = 4
 	hierarchy.nodeCount++;
-	hierarchy.nodes.push_back(&leftSholder);  // index = 8
+	hierarchy.nodes.push_back(&bottomElbow);   // index = 5
+	hierarchy.nodeCount++;
+	hierarchy.nodes.push_back(&bottomWrist);   // index = 6
+	hierarchy.nodeCount++;
+
+	hierarchy.nodes.push_back(&rightShoulder); // index = 7
+	hierarchy.nodeCount++;
+	hierarchy.nodes.push_back(&leftShoulder);  // index = 8
 	hierarchy.nodeCount++;
 
 	body.parentIndex = -1;
@@ -214,8 +214,8 @@ int main() {
 	bottomElbow.parentIndex = 4;
 	bottomWrist.parentIndex = 5;
 
-	rightSholder.parentIndex = 0;
-	leftSholder.parentIndex = 0;
+	rightShoulder.parentIndex = 0;
+	leftShoulder.parentIndex = 0;
 	
 	body.transform.scale = glm::vec3(0.5f);
 	topJoint.transform.scale = glm::vec3(0.5f);
@@ -226,8 +226,8 @@ int main() {
 	bottomElbow.transform.scale = glm::vec3(0.5f);
 	bottomWrist.transform.scale = glm::vec3(0.5f);
 
-	rightSholder.transform.scale = glm::vec3(0.3f);
-	leftSholder.transform.scale = glm::vec3(0.3f);
+	rightShoulder.transform.scale = glm::vec3(0.3f);
+	leftShoulder.transform.scale = glm::vec3(0.3f);
 
 	body.transform.position = glm::vec3(0, 1.0f, 0.0f);
 	topJoint.transform.position = glm::vec3(0, 2.0f, 0.0f);
@@ -247,10 +247,10 @@ int main() {
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
 
-		topJoint.transform.rotation = glm::rotate(topJoint.transform.rotation, deltaTime * 5, glm::vec3(0.0, 1.0, 0.0));
+		//topJoint.transform.rotation = glm::rotate(topJoint.transform.rotation, deltaTime * 5, glm::vec3(0.0, 1.0, 0.0));
 		bottomJoint.transform.rotation = glm::rotate(bottomJoint.transform.rotation, deltaTime, glm::vec3(0.0, -1.0, 0.0));
-		rightSholder.transform.position = glm::vec3(2.0, glm::sin(time * 2) * 0.5, 0.0f);
-		leftSholder.transform.position = glm::vec3(-2.0, glm::sin(time * 2) * 0.5, 0.0f);
+		rightShoulder.transform.position = glm::vec3(2.0, glm::sin(time * 2) * 0.5, 0.0f);
+		leftShoulder.transform.position = glm::vec3(-2.0, glm::sin(time * 2) * 0.5, 0.0f);
 
 		for each (Node *node in hierarchy.nodes)
 		{
