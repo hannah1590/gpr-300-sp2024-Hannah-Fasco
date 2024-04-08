@@ -247,17 +247,16 @@ int main() {
 		deltaTime = time - prevFrameTime;
 		prevFrameTime = time;
 
-		//topJoint.transform.rotation = glm::rotate(topJoint.transform.rotation, deltaTime * 5, glm::vec3(0.0, 1.0, 0.0));
+		topJoint.transform.rotation = glm::rotate(topJoint.transform.rotation, deltaTime * 5, glm::vec3(0.0, 1.0, 0.0));
 		bottomJoint.transform.rotation = glm::rotate(bottomJoint.transform.rotation, deltaTime, glm::vec3(0.0, -1.0, 0.0));
 		rightShoulder.transform.position = glm::vec3(2.0, glm::sin(time * 2) * 0.5, 0.0f);
 		leftShoulder.transform.position = glm::vec3(-2.0, glm::sin(time * 2) * 0.5, 0.0f);
+		body.transform.rotation = glm::rotate(body.transform.rotation, deltaTime, glm::vec3(1.0, 0.0, 1.0));
 
 		for each (Node *node in hierarchy.nodes)
 		{
 			node->localTransform = node->transform.modelMatrix();
 		}
-
-		body.localTransform = glm::rotate(body.localTransform, time, glm::vec3(1.0, 0.0, 1.0));
 
 		SolveFK(hierarchy);
 
